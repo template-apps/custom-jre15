@@ -1,6 +1,7 @@
 # Stage 1: Create a custom Java Image using JLink.
 # Currently Services itself are not modular. Something we can further optimise in future.
 FROM adoptopenjdk/openjdk15:alpine as customJRECreateStage
+ARG TARGETPLATFORM
 MAINTAINER Sachin Goyal <sachin.goyal.se@gmail.com>
 VOLUME /opt
 
@@ -14,6 +15,7 @@ RUN jlink \
 # Stage 2: Use the custom Java image
 # Have to deploy some dependencies as per first stage's base image's Dockerfile (https://github.com/AdoptOpenJDK/openjdk-docker/blob/master/15/jdk/alpine/Dockerfile.hotspot.releases.full) to run Java
 FROM alpine:3.14
+ARG TARGETPLATFORM
 MAINTAINER Sachin Goyal <sachin.goyal.se@gmail.com>
 VOLUME /opt
 
