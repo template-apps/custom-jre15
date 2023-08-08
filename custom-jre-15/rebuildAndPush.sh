@@ -1,22 +1,47 @@
 #!/bin/bash
 
-# Example local: ./rebuildAndPush localhost:5500 apps-template latest
-# Example production: ./rebuildAndPush 1234567890123.ecr.us-west-2.amazonaws.com apps-template 1.2
+# Example: ./rebuildAndPush.sh -r localhost:5500 -n apps-template -v latest -p linux/x86_64
+# Example: ./rebuildAndPush.sh -r 881387567440.dkr.ecr.us-east-1.amazonaws.com -n apps-template -v 0.1 -p linux/x86_64
 
-REGISTRY=$1
-NAMESPACE=$2
-VERSION=$3
-SERVICE=${PWD##*/}
-PLATFORM=linux/x86_64
+ARCH=""
 
-# delete existing containers/images on local docker registry.
-if echo "$1" | grep -q "localhost:"; then
-  docker rmi $(docker images -qa $REGISTRY'/'$NAMESPACE'-'$SERVICE)
-  echo ">>> Existing Images/Containers Deleted"
+while getopts "r:n:v:p:" opt; do
+    case $opt in
+        r) REGISTRY="$OPTARG";;
+        n) NAMESPACE="$OPTARG";;
+        v) VERSION="$OPTARG";;
+        p) ARCH="$OPTARG";;
+        \?) echo "Usage: $0 -r <registry> -n <namespace> -v <version> [-p <architecture>]"
+            exit 1
+        ;;
+    esac
+done
+
+# Check if all required parameters are provided
+if [ -z "$REGISTRY" ] || [ -z "$NAMESPACE" ] || [ -z "$VERSION" ]; then
+    echo "Usage: $0 -r <registry> -n <namespace> -v <version> [-p <architecture>]"
+    exit 1
 fi
 
-docker build --no-cache --platform $PLATFORM -t $REGISTRY'/'$NAMESPACE'-'$SERVICE':'$VERSION .
+SERVICE="$(basename "$PWD")"
+REPOSITORY="$REGISTRY/$NAMESPACE-$SERVICE:$VERSION"
+
+# Remove existing images/containers based on the repository
+docker image rm "$(docker images -q "$REPOSITORY")" 2>/dev/null
+echo ">>> Existing Images/Containers Deleted"
+
+# Build the Docker image
+if [ -z "$ARCH" ]; then
+    docker build --no-cache -t "$REPOSITORY" .
+else
+    docker build --no-cache --platform "$ARCH" -t "$REPOSITORY" .
+fi
 echo ">>> New Docker Image Built"
 
-docker push $REGISTRY'/'$NAMESPACE'-'$SERVICE':'$VERSION
-echo ">>> New Docker Image Pushed to Docker Hub"
+# Tag the Docker image
+docker tag "$REPOSITORY" "$REPOSITORY"
+echo ">>> New Docker Image Tagged"
+
+# Push the Docker image to the registry
+docker push "$REPOSITORY"
+echo ">>> New Docker Image Pushed to $REGISTRY"
