@@ -28,7 +28,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{env.REGION}}
+          aws-region: ${{vars.REGION}}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -42,11 +42,11 @@ jobs:
           (
             cd custom-jre-15 || exit
             ./rebuildAndPush.sh -r ${{ steps.login-ecr.outputs.registry }} \
-                      -n ${{env.NAMESPACE}} -v latest
+                      -n ${{vars.NAMESPACE}} -v latest
           )
           echo "Building and pushing JRE 20 image..."
           (
             cd custom-jre-20 || exit
             ./rebuildAndPush.sh -r ${{ steps.login-ecr.outputs.registry }} \
-                      -n ${{env.NAMESPACE}} -v latest
+                      -n ${{vars.NAMESPACE}} -v latest
           )
