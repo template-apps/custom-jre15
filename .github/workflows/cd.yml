@@ -1,0 +1,55 @@
+name: Continuous Deployment
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+env:
+  NAMESPACE: apps-template
+  REGION: us-east-1
+
+jobs:
+  build:
+    name: Build & Push Docker Image to Registry
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: '0'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{env.REGION}}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: 'true'
+
+      - name: Build Image and Push to ECR
+        run: |
+          echo "Building and pushing JRE 15 image..."
+          (
+            cd custom-jre-15 || exit
+            ./rebuildAndPush.sh -r ${{ steps.login-ecr.outputs.registry }} \
+                      -n ${{env.NAMESPACE}} -v latest
+          )
+          echo "Building and pushing JRE 20 image..."
+          (
+            cd custom-jre-20 || exit
+            ./rebuildAndPush.sh -r ${{ steps.login-ecr.outputs.registry }} \
+                      -n ${{env.NAMESPACE}} -v latest
+          )
