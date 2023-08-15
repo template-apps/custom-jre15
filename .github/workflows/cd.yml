@@ -6,9 +6,6 @@ on:
       - closed
     branches:
       - main
-env:
-  NAMESPACE: apps-template
-  REGION: us-east-1
 
 jobs:
   build:
